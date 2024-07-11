@@ -57,6 +57,11 @@ NUM_ITERATIONS = 1000000
 WITH_MIXING = True                 # True if pigs from the previous pen are included in the selection of pigs that can leave the pen
 
 same_config_count = 0
+pen_A_same_config_count = 0
+pen_B_same_config_count = 0
+pen_C_same_config_count = 0
+pen_D_same_config_count = 0
+
 for i in range(NUM_ITERATIONS):
     # Instantiate pig pens
     pen_A = PigPen(NUM_BROWN_PIGS, NUM_RED_PIGS)
@@ -91,4 +96,21 @@ for i in range(NUM_ITERATIONS):
         pen_D.compare_pig_counts(NUM_BROWN_PIGS, NUM_RED_PIGS)):
             same_config_count = same_config_count + 1
             
+    if pen_A.compare_pig_counts(NUM_BROWN_PIGS, NUM_RED_PIGS):
+        pen_A_same_config_count = pen_A_same_config_count + 1
+        
+    if pen_B.compare_pig_counts(NUM_BROWN_PIGS, NUM_RED_PIGS):
+        pen_B_same_config_count = pen_B_same_config_count + 1
+
+    if pen_C.compare_pig_counts(NUM_BROWN_PIGS, NUM_RED_PIGS):
+        pen_C_same_config_count = pen_C_same_config_count + 1
+
+    if pen_D.compare_pig_counts(NUM_BROWN_PIGS, NUM_RED_PIGS):
+        pen_D_same_config_count = pen_D_same_config_count + 1
+
+            
 print("probability of same pen configuration after moves = ", same_config_count/NUM_ITERATIONS)
+print("probability of pen A same configuration after moves = ", pen_A_same_config_count/NUM_ITERATIONS)
+print("probability of pen B same configuration after moves = ", pen_B_same_config_count/NUM_ITERATIONS)
+print("probability of pen C same configuration after moves = ", pen_C_same_config_count/NUM_ITERATIONS)
+print("probability of pen D same configuration after moves = ", pen_D_same_config_count/NUM_ITERATIONS)
