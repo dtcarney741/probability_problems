@@ -26,10 +26,15 @@ class Team:
         self.coach_win_probability = win_probability
         self.wins = 0
         self.losses = 0
+        self.coach_career_wins = 0
+        self.coach_career_losses = 0
         self.losing_seasons = 0
         self.team_championships = 0
         self.coach_championships = 0
-        Team.team_name_index += 1        
+        if Team.team_name_index == len(animal_names)-1:
+            Team.team_name_index = 0
+        else:
+            Team.team_name_index += 1
 
     def get_team_name(self):
         return self.team_name
@@ -49,6 +54,12 @@ class Team:
     def get_losses(self):
         return self.losses
 
+    def get_coach_career_wins(self):
+        return self.coach_career_wins
+
+    def get_coach_career_losses(self):
+        return self.coach_career_losses
+
     def get_coach_championships(self):
         return self.coach_championships
     
@@ -63,9 +74,11 @@ class Team:
         
     def increment_wins(self):
         self.wins = self.wins + 1
+        self.coach_career_wins = self.coach_career_wins + 1
         
     def increment_losses(self):
         self.losses = self.losses + 1
+        self.coach_career_losses = self.coach_career_losses + 1
         
     def get_losing_seasons(self):
         return self.losing_seasons
@@ -81,3 +94,5 @@ class Team:
         self.coach_id = coach_id
         self.losing_seasons = 0
         self.coach_championships = 0
+        self.coach_career_wins = 0
+        self.coach_career_losses = 0
