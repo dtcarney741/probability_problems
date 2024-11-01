@@ -9,12 +9,16 @@ import team
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import binom
 
 
 class MonteCarloSimulator:
-    def __init__(self):
+    TOL = 0.0001
+    
+    def __init__(self, verbose):
         self.coach_win_loss_ratio_data_sets = {}
         self.coach_championships_data_sets = {}
+        self.verbose = verbose
 
     def add_coach_win_loss_ratio_data_point(self, dataset_name, value):
         if dataset_name not in self.coach_win_loss_ratio_data_sets:
@@ -66,6 +70,36 @@ class MonteCarloSimulator:
         else:
             print(f'Dataset "{dataset_name}" not found.')
 
+    def fit_coach_championship_distribution(self, dataset_name):
+
+        if dataset_name in self.coach_championships_data_sets:
+            observed_data = np.array(self.coach_championships_data_sets[dataset_name])
+        else:
+            print(f'Dataset "{dataset_name}" not found.')
+        
+        mean = observed_data.mean()
+        var = np.var(observed_data, ddof=1)
+        print(f'mean = {mean}, var = {var}')
+        # method of moments estimators
+        p_est = 1 - (var / mean) 
+        n_est = mean / p_est
+        
+        # fitted binominal function
+        fitted_binom = binom(int(n_est), p_est)
+        
+        # Step 5: Plot the observed data and the fitted distribution
+        plt.hist(observed_data, bins=np.arange(observed_data.min(), observed_data.max()+2) - 0.5, density=True, alpha=0.6, color='g', edgecolor='black')
+        x = np.arange(observed_data.min(), observed_data.max()+1)
+        plt.plot(x, fitted_binom.pmf(x), 'o-', color='r')
+        plt.title('Observed Data and Fitted Binomial Distribution')
+        plt.xlabel('Number of Successes')
+        plt.ylabel('Probability')
+        plt.legend(['Fitted Binomial', 'Observed Data'])
+        plt.show()
+        
+        return(n_est, p_est)
+
+        
     def process_seasons_data(self, teams):
         """
         This function takes the data at the end of a simulation and adds it to the data sets
@@ -111,10 +145,11 @@ class MonteCarloSimulator:
             for teamx in teams:
                 teamx.set_wins(0)
                 teamx.set_losses(0)
-    
-            print("Season: ", season+1)
+            if self.verbose:
+                print("Season: ", season+1)
             for game in range(0,GAMES_PER_SEASON):
-                print("Game: ", game+1)
+                if self.verbose:
+                    print("Game: ", game+1)
                 # Shuffle the teams to ensure random matchups
                 random.shuffle(teams)
                 
@@ -128,23 +163,26 @@ class MonteCarloSimulator:
                     t = team1.get_coach_win_probability() + team2.get_coach_win_probability()
                     team1_p = team1.get_coach_win_probability() / t
                     team2_p = team2.get_coach_win_probability() / t
-                    assert((team1_p + team2_p > 1-TOL) and team1_p + team2_p < 1+TOL)
+                    assert((team1_p + team2_p > 1-self.TOL) and team1_p + team2_p < 1+self.TOL)
                     if random.random() <= team1_p:
                         #team 1 wins
                         team1.increment_wins()
                         team2.increment_losses()
-                        print(f"Matchup {idx}: Team with Coach ID {team1.get_coach_id()} vs Team with Coach ID {team2.get_coach_id()}: Winner {team1.get_coach_id()}")
+                        if self.verbose:
+                            print(f"Matchup {idx}: Team with Coach ID {team1.get_coach_id()} vs Team with Coach ID {team2.get_coach_id()}: Winner {team1.get_coach_id()}")
         
                     else:
                         #team 2 wins
                         team1.increment_losses()
                         team2.increment_wins()
-                        print(f"Matchup {idx}: Team with Coach ID {team1.get_coach_id()} vs Team with Coach ID {team2.get_coach_id()}: Winner {team2.get_coach_id()}")
+                        if self.verbose:
+                            print(f"Matchup {idx}: Team with Coach ID {team1.get_coach_id()} vs Team with Coach ID {team2.get_coach_id()}: Winner {team2.get_coach_id()}")
         
             # Sort teams by number of wins (descending)
             sorted_teams_by_wins = sorted(teams, key=lambda x: x.get_wins(), reverse=True)
             for teamx in sorted_teams_by_wins:
-                print(f"Team {teamx.get_coach_id()}: Wins={teamx.get_wins()}, Losses={teamx.get_losses()}")
+                if self.verbose:
+                    print(f"Team {teamx.get_coach_id()}: Wins={teamx.get_wins()}, Losses={teamx.get_losses()}")
                 
             # choose champion
             t = 0
@@ -160,7 +198,8 @@ class MonteCarloSimulator:
                 if p <= p_cumulative:
                     teamx.won_championship()
                     break
-            print(f"Champion {teamx.get_team_name()}, Coach: {teamx.get_coach_id()}")
+            if self.verbose:
+                print(f"Champion {teamx.get_team_name()}, Coach: {teamx.get_coach_id()}")
 
         self.process_seasons_data(teams)
         
@@ -173,12 +212,12 @@ SUPERIOR_COACH_WIN_PROBABILITY = 0.55
 NUMBER_OF_TEAMS = 32
 GAMES_PER_SEASON = 16
 NUMBER_OF_SEASONS = 10
-TOL = 0.0001
 PLAYOFF_TEAMS = 4
 SIM_ITERATIONS = 1000
+VERBOSE = False
 
 
-sim = MonteCarloSimulator()
+sim = MonteCarloSimulator(VERBOSE)
 
 for x in range(0,SIM_ITERATIONS):
     # Create teams with random coach IDs and win probabilities
@@ -187,13 +226,15 @@ for x in range(0,SIM_ITERATIONS):
     
     # Choose 1 coach to be superior to the rest
     teams[0].set_coach_win_probability(SUPERIOR_COACH_WIN_PROBABILITY)
-
+    teams[10].set_coach_win_probability(SUPERIOR_COACH_WIN_PROBABILITY)
+    
     sim.simulate_seasons(teams, NUMBER_OF_SEASONS, GAMES_PER_SEASON)
     
-    print("")
-    print(f"Iteration {x+1}: Summary Results for {NUMBER_OF_SEASONS} Seasons")
-    for teamx in teams:
-        print(f"Team: {teamx.get_team_name()}, Championships: {teamx.get_team_championships()}, Coach Win Probability: {teamx.get_coach_win_probability()}")
+    if VERBOSE:
+        print("")
+        print(f"Iteration {x+1}: Summary Results for {NUMBER_OF_SEASONS} Seasons")
+        for teamx in teams:
+            print(f"Team: {teamx.get_team_name()}, Championships: {teamx.get_team_championships()}, Coach Win Probability: {teamx.get_coach_win_probability()}")
     
 
 
@@ -217,3 +258,12 @@ sim.plot_coach_win_loss_ratio_distribution(TYPICAL_COACH_WIN_PROBABILITY)
 sim.plot_coach_win_loss_ratio_distribution(SUPERIOR_COACH_WIN_PROBABILITY)
 sim.plot_coach_championships_distribution(TYPICAL_COACH_WIN_PROBABILITY)
 sim.plot_coach_championships_distribution(SUPERIOR_COACH_WIN_PROBABILITY)
+
+# Determine best fit and plot the actual distribution and best fit distribution for coach championships
+print("")
+print('Typical Coach - Binomial fit for Coach championships won')
+(n_est, p_est) = sim.fit_coach_championship_distribution(TYPICAL_COACH_WIN_PROBABILITY)
+print(f'n_est = {n_est}, p_est = {p_est}')
+print('Superior Coach - Binomial fit for Coach championships won')
+(n_est, p_est) = sim.fit_coach_championship_distribution(SUPERIOR_COACH_WIN_PROBABILITY)
+print(f'n_est = {n_est}, p_est = {p_est}')
