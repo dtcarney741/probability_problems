@@ -82,6 +82,36 @@ def birthday_probability_method1(n):
 
 
 def birthday_probability_method3(n):
+    # This is the exact calculation method from Aiden's probability text book based on probability theory.
+    # It is mathematically identical to method 1, though calculated in a slightly different order.
+    
+    if USE_DECIMAL:
+        total_days = decimal.Decimal(365)
+        
+        # Initialize the probability that no two people share the same birthday (as 1)
+        prob_no_shared = decimal.Decimal(1)
+        
+        one = decimal.Decimal(1)
+    else:
+        total_days = 365
+        
+        # Initialize the probability that no two people share the same birthday (as 1)
+        prob_no_shared = 1
+        
+        one = 1
+        
+    multiplier = total_days
+    for i in range(n):
+        prob_no_shared *= multiplier
+        multiplier = multiplier - one
+        
+    prob_no_shared = prob_no_shared / (total_days**n)
+    prob_shared = one - prob_no_shared
+    
+    return prob_shared
+        
+        
+def birthday_probability_method4(n):
     # This method came from Aiden's probability text book and is a simple approximation of the exact answer
     # It almost exactly matches the approximation of method 2 from the google search in result, but is different in
     # math operations
@@ -107,6 +137,7 @@ def birthday_probability_method3(n):
 method1 = []
 method2 = []
 method3 = []
+method4 = []
 for n in range(2,365):
     p = birthday_probability_method1(n)
     method1.append(p)
@@ -114,16 +145,20 @@ for n in range(2,365):
     method2.append(p)
     p = birthday_probability_method3(n)
     method3.append(p)
+    p = birthday_probability_method4(n)
+    method4.append(p)
 
 
 error12 = [i - j for i, j in zip(method1, method2)]
+error42 = [i - j for i, j in zip(method4, method2)]
 error32 = [i - j for i, j in zip(method3, method2)]
 
 # Plotting the data using matplotlib
 plt.figure(figsize=(10, 6))
 plt.plot(range(2, 365), method1, label="Method 1", color="blue")
 plt.plot(range(2, 365), method2, label="Method 2", color="red", linestyle='--')
-plt.plot(range(2, 365), method3, label="Method 2", color="green", linestyle='--')
+plt.plot(range(2, 365), method3, label="Method 3", color="green", linestyle='--')
+plt.plot(range(2, 365), method4, label="Method 4", color="orange", linestyle='-')
 
 
 plt.title("Birthday Paradox: Comparison of Method 1 and Method 2")
@@ -138,5 +173,6 @@ plt.show()
 plt.figure(figsize=(10, 6))
 plt.scatter(range(2, 365), error12, label="error12", color="red", linestyle='--')
 plt.scatter(range(2, 365), error32, label="error32", color="blue", linestyle='--')
+plt.scatter(range(2, 365), error42, label="error42", color="green", linestyle='--')
 plt.grid(True)
 plt.show()
