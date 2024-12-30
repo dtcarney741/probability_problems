@@ -39,6 +39,22 @@ class MonteCarloSimulator:
         else:
             return None, None
 
+    def get_coach_statistics_data_set_size(self):
+        c_size = 0
+        wl_size = 0
+        
+        for datasetname in self.coach_championships_data_sets:
+            c_size = c_size + len(self.coach_championships_data_sets[datasetname])
+
+        for datasetname in self.coach_win_loss_ratio_data_sets:
+            wl_size = wl_size + len(self.coach_win_loss_ratio_data_sets[datasetname])
+
+        if c_size != wl_size:
+            return None
+        else:
+            return c_size
+
+
     def get_coach_championship_statistics(self, dataset_name):
         if dataset_name in self.coach_championships_data_sets:
             data = self.coach_championships_data_sets[dataset_name]
@@ -100,7 +116,7 @@ class MonteCarloSimulator:
         return(n_est, p_est)
 
         
-    def process_seasons_data(self, teams):
+    def process_seasons_data(self, teams, fired_coaches):
         """
         This function takes the data at the end of a simulation and adds it to the data sets
 
@@ -114,14 +130,24 @@ class MonteCarloSimulator:
 
         """
         for teamx in teams:
-            w = teamx.get_coach_career_wins()
-            l = teamx.get_coach_career_losses()
-            c = teamx.get_coach_championships()
-            self.add_coach_championships_data_point(teamx.get_coach_win_probability(), c)
-            self.add_coach_win_loss_ratio_data_point(teamx.get_coach_win_probability(), w/l)
-                   
+            # If the team did not fire their coach in the last season, collect the coach's statistics
+            if (teamx.get_coach_career_wins() > 0 or teamx.get_coach_career_wins() > 0):
+                w = teamx.get_coach_career_wins()
+                l = teamx.get_coach_career_losses()
+                c = teamx.get_coach_championships()
+                self.add_coach_championships_data_point(teamx.get_coach_win_probability(), c)
+                self.add_coach_win_loss_ratio_data_point(teamx.get_coach_win_probability(), w/l)
+
+            # collect the fired coaches' statistics
+            for coachx in fired_coaches:
+                w = coachx.get_coach_career_wins()
+                l = coachx.get_coach_career_losses()
+                c = teamx.get_coach_championships()
+                self.add_coach_championships_data_point(coachx.get_coach_win_probability(), c)
+                self.add_coach_win_loss_ratio_data_point(coachx.get_coach_win_probability(), w/l)
+            
         
-    def simulate_seasons(self, teams, n, games_per_season):
+    def simulate_seasons(self, teams, n, games_per_season, next_coach_id):
         """
         Simulates multiple seasons of games.
     
@@ -129,17 +155,21 @@ class MonteCarloSimulator:
         teams: array of Team objects that are in the league to be simulated
         n (int): The number of seasons to simulate.
         games_per_season (int): The number of games played per season.
-    
+        next_coach_id (int): ID number for the next available coach to be used for new coaches who replace fired coaches
+        fired_coaches (list of Coach objects)
         Returns:
         None
         
         Modifies:
             Each team in teams is modified based on simulation
+            next_coach_id is modified based on new coaches to replace fired coaches
+            fired_coaches - coaches that are fired are appended to this list
             Statistics are collected for each season in:
                 self.coach_win_loss_ratio_data_sets
                 self.coach_championships_data_sets
         """
         
+        fired_coaches = []
         for season in range(0, n):
             # reset wins and losses for next season
             for teamx in teams:
@@ -200,8 +230,23 @@ class MonteCarloSimulator:
                     break
             if self.verbose:
                 print(f"Champion {teamx.get_team_name()}, Coach: {teamx.get_coach_id()}")
-
-        self.process_seasons_data(teams)
+                
+            # coach hirings and firings
+            for teamx in teams:
+                if teamx.get_wins() < teamx.get_losses():
+                    teamx.increment_losing_seasons()
+                else:
+                    teamx.reset_consecutive_losing_seasons()
+                
+                if teamx.get_consecutive_losing_seasons() > COACH_LOSING_SEASON_FIRING_THRESHOLD:
+                    fired_coaches.append(teamx.get_coach())
+                    teamx.new_coach(next_coach_id)
+                    next_coach_id = next_coach_id + 1
+        
+        if self.verbose:
+            print("Fired Coaches: " + " ".join(str(coachx.get_coach_id()) for coachx in fired_coaches))
+        
+        self.process_seasons_data(teams, fired_coaches)
         
     
             
@@ -209,6 +254,7 @@ class MonteCarloSimulator:
 # Simulation Constants
 TYPICAL_COACH_WIN_PROBABILITY = 0.45
 SUPERIOR_COACH_WIN_PROBABILITY = 0.55
+COACH_LOSING_SEASON_FIRING_THRESHOLD = 3
 NUMBER_OF_TEAMS = 32
 GAMES_PER_SEASON = 16
 NUMBER_OF_SEASONS = 10
@@ -218,17 +264,18 @@ VERBOSE = False
 
 
 sim = MonteCarloSimulator(VERBOSE)
+next_coach_id = 1
 
 for x in range(0,SIM_ITERATIONS):
     # Create teams with random coach IDs and win probabilities
-    teams = [team.Team(coach_id=i, win_probability=TYPICAL_COACH_WIN_PROBABILITY) for i in range(1, NUMBER_OF_TEAMS+1)]
-    next_coach_id = NUMBER_OF_TEAMS + 1
+    teams = [team.Team(coach_id=i, win_probability=TYPICAL_COACH_WIN_PROBABILITY) for i in range(next_coach_id, next_coach_id+NUMBER_OF_TEAMS)]
+    next_coach_id = next_coach_id + NUMBER_OF_TEAMS
     
     # Choose 1 coach to be superior to the rest
     teams[0].set_coach_win_probability(SUPERIOR_COACH_WIN_PROBABILITY)
     teams[10].set_coach_win_probability(SUPERIOR_COACH_WIN_PROBABILITY)
     
-    sim.simulate_seasons(teams, NUMBER_OF_SEASONS, GAMES_PER_SEASON)
+    sim.simulate_seasons(teams, NUMBER_OF_SEASONS, GAMES_PER_SEASON, next_coach_id)
     
     if VERBOSE:
         print("")
@@ -239,6 +286,11 @@ for x in range(0,SIM_ITERATIONS):
 
 
 # Print statistics from simulation runs
+print("")
+print("-------------------------")
+print("Data Set Composition")
+print("Next coach id: ", next_coach_id)
+print("Total coaches in statistical samples: ", sim.get_coach_statistics_data_set_size())
 print("")
 print("-------------------------")
 print("Win Loss Ratio Statistics")

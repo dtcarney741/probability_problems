@@ -17,20 +17,43 @@ animal_names = [
 ]
 
 
+class Coach:
+    def __init__(self, coach_id, team_coached):
+        self.coach_id = coach_id
+        self.coach_career_wins = 0
+        self.coach_career_losses = 0
+        self.coach_championships = 0
+        self.team_coached = team_coached
+
+    def get_coach_id(self):
+        return self.coach_id
+
+    def get_coach_career_wins(self):
+        return self.coach_career_wins
+
+    def get_coach_career_losses(self):
+        return self.coach_career_losses
+
+    def get_coach_championships(self):
+        return self.coach_championships
+    
+    def get_coach_win_probability(self):
+        return self.team_coached.get_coach_win_probability()
+    
+        
+        
 class Team:
     team_name_index = 0   # Class variable to keep track of the next animal name to assign
     
     def __init__(self, coach_id, win_probability):
         self.team_name = animal_names[Team.team_name_index]
-        self.coach_id = coach_id
         self.coach_win_probability = win_probability
         self.wins = 0
         self.losses = 0
-        self.coach_career_wins = 0
-        self.coach_career_losses = 0
+        self.coach = Coach(coach_id, self)
         self.losing_seasons = 0
+        self.consecutive_losing_seasons = 0
         self.team_championships = 0
-        self.coach_championships = 0
         if Team.team_name_index == len(animal_names)-1:
             Team.team_name_index = 0
         else:
@@ -40,7 +63,10 @@ class Team:
         return self.team_name
 
     def get_coach_id(self):
-        return self.coach_id
+        return self.coach.get_coach_id()
+    
+    def get_coach(self):
+        return self.coach
 
     def get_coach_win_probability(self):
         return self.coach_win_probability
@@ -55,13 +81,13 @@ class Team:
         return self.losses
 
     def get_coach_career_wins(self):
-        return self.coach_career_wins
+        return self.coach.get_coach_career_wins()
 
     def get_coach_career_losses(self):
-        return self.coach_career_losses
+        return self.coach.get_coach_career_losses()
 
     def get_coach_championships(self):
-        return self.coach_championships
+        return self.coach.get_coach_championships()
     
     def get_team_championships(self):
         return self.team_championships
@@ -74,25 +100,28 @@ class Team:
         
     def increment_wins(self):
         self.wins = self.wins + 1
-        self.coach_career_wins = self.coach_career_wins + 1
+        self.coach.coach_career_wins = self.coach.coach_career_wins + 1
         
     def increment_losses(self):
         self.losses = self.losses + 1
-        self.coach_career_losses = self.coach_career_losses + 1
+        self.coach.coach_career_losses = self.coach.coach_career_losses + 1
         
     def get_losing_seasons(self):
         return self.losing_seasons
-    
+
+    def get_consecutive_losing_seasons(self):
+        return self.consecutive_losing_seasons
+
+    def reset_consecutive_losing_seasons(self):
+        self.consecutive_losing_seasons = 0
+        
     def increment_losing_seasons(self):
         self.losing_seasons = self.losing_seasons + 1
+        self.consecutive_losing_seasons = self.consecutive_losing_seasons + 1
         
     def won_championship(self):
-        self.coach_championships = self.coach_championships + 1
+        self.coach.coach_championships = self.coach.coach_championships + 1
         self.team_championships = self.team_championships + 1
     
     def new_coach(self, coach_id):
-        self.coach_id = coach_id
-        self.losing_seasons = 0
-        self.coach_championships = 0
-        self.coach_career_wins = 0
-        self.coach_career_losses = 0
+        self.coach = Coach(coach_id, self)
