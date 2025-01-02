@@ -35,9 +35,10 @@ class MonteCarloSimulator:
             data = self.coach_win_loss_ratio_data_sets[dataset_name]
             mean = np.mean(data)
             std_dev = np.std(data)
-            return mean, std_dev
+            range_val = np.max(data) - np.min(data)
+            return mean, std_dev, range_val
         else:
-            return None, None
+            return None, None, None
 
     def get_coach_statistics_data_set_size(self):
         c_size = 0
@@ -60,14 +61,17 @@ class MonteCarloSimulator:
             data = self.coach_championships_data_sets[dataset_name]
             mean = np.mean(data)
             std_dev = np.std(data)
-            return mean, std_dev
+            range_val = np.max(data) - np.min(data)
+            return mean, std_dev, range_val
         else:
-            return None, None
+            return None, None, None
 
     def plot_coach_win_loss_ratio_distribution(self, dataset_name):
         if dataset_name in self.coach_win_loss_ratio_data_sets:
             data = self.coach_win_loss_ratio_data_sets[dataset_name]
-            plt.hist(data, bins=30, edgecolor='black')
+            range_val = np.max(data) - np.min(data)
+            bin_cnt = 10 * round(range_val)
+            plt.hist(data, bins=bin_cnt, edgecolor='black')
             plt.title(f'{dataset_name} Coach Win Loss Ratio Data Distribution')
             plt.xlabel('Win Loss Ratio')
             plt.ylabel('Frequency')
@@ -78,7 +82,8 @@ class MonteCarloSimulator:
     def plot_coach_championships_distribution(self, dataset_name):
         if dataset_name in self.coach_championships_data_sets:
             data = self.coach_championships_data_sets[dataset_name]
-            plt.hist(data, bins=30, edgecolor='black')
+            range_val = np.max(data) - np.min(data)
+            plt.hist(data, bins=round(range_val), edgecolor='black')
             plt.title(f'{dataset_name} Coach Championships Data Distribution')
             plt.xlabel('Number of Championships Won')
             plt.ylabel('Frequency')
@@ -87,34 +92,41 @@ class MonteCarloSimulator:
             print(f'Dataset "{dataset_name}" not found.')
 
     def fit_coach_championship_distribution(self, dataset_name):
-
         if dataset_name in self.coach_championships_data_sets:
             observed_data = np.array(self.coach_championships_data_sets[dataset_name])
+
+            mean = observed_data.mean()
+            var = np.var(observed_data, ddof=1)
+            print(f'mean = {mean}, var = {var}')
+
+            # method of moments estimators
+            p_est = 1 - (var / mean)
+            n_est = mean / p_est
+            if (p_est < 0):
+                print('Variance too large, cannot use method of moments estimation for distrubtion)')
+                return(n_est, p_est)
+            
+            # fitted binominal function
+            fitted_binom = binom(int(n_est), p_est)
+            
+            # Step 5: Plot the observed data and the fitted distribution
+            bins_val = np.arange(observed_data.min(), observed_data.max()+2) - 0.5
+            plt.hist(observed_data, bins=bins_val, density=True, alpha=0.6, color='g', edgecolor='black')
+            x = np.arange(observed_data.min(), observed_data.max()+1)
+            plt.plot(x, fitted_binom.pmf(x), 'o-', color='r')
+            title = 'Observed Data and Fitted Binomial Distribution for Coach Championships Probability ' + str(dataset_name)
+            plt.title(title)
+            plt.xlabel('Number of Successes')
+            plt.ylabel('Probability')
+            plt.legend(['Fitted Binomial', 'Observed Data'])
+            plt.show()
+        
+            return(n_est, p_est)
+
         else:
             print(f'Dataset "{dataset_name}" not found.')
+            return(None, None)
         
-        mean = observed_data.mean()
-        var = np.var(observed_data, ddof=1)
-        print(f'mean = {mean}, var = {var}')
-        # method of moments estimators
-        p_est = 1 - (var / mean) 
-        n_est = mean / p_est
-        
-        # fitted binominal function
-        fitted_binom = binom(int(n_est), p_est)
-        
-        # Step 5: Plot the observed data and the fitted distribution
-        plt.hist(observed_data, bins=np.arange(observed_data.min(), observed_data.max()+2) - 0.5, density=True, alpha=0.6, color='g', edgecolor='black')
-        x = np.arange(observed_data.min(), observed_data.max()+1)
-        plt.plot(x, fitted_binom.pmf(x), 'o-', color='r')
-        title = 'Observed Data and Fitted Binomial Distribution for Coach win Probability ' + str(dataset_name)
-        plt.title(title)
-        plt.xlabel('Number of Successes')
-        plt.ylabel('Probability')
-        plt.legend(['Fitted Binomial', 'Observed Data'])
-        plt.show()
-        
-        return(n_est, p_est)
 
         
     def process_seasons_data(self, teams, fired_coaches):
@@ -295,16 +307,16 @@ print("Total coaches in statistical samples: ", sim.get_coach_statistics_data_se
 print("")
 print("-------------------------")
 print("Win Loss Ratio Statistics")
-mean, std_dev = sim.get_coach_win_loss_ratio_statistics(TYPICAL_COACH_WIN_PROBABILITY)
-print(f'Typyical Coach - Mean: {mean}, Standard Deviation: {std_dev}')
-mean, std_dev = sim.get_coach_win_loss_ratio_statistics(SUPERIOR_COACH_WIN_PROBABILITY)
-print(f'Superior Coach - Mean: {mean}, Standard Deviation: {std_dev}')
+mean, std_dev, range_val = sim.get_coach_win_loss_ratio_statistics(TYPICAL_COACH_WIN_PROBABILITY)
+print(f'Typyical Coach - Mean: {mean}, Standard Deviation: {std_dev}, Range: {range_val}')
+mean, std_dev, range_val = sim.get_coach_win_loss_ratio_statistics(SUPERIOR_COACH_WIN_PROBABILITY)
+print(f'Superior Coach - Mean: {mean}, Standard Deviation: {std_dev}, Range: {range_val}')
 print("")
 print("Championship Statistics")
-mean, std_dev = sim.get_coach_championship_statistics(TYPICAL_COACH_WIN_PROBABILITY)
-print(f'Typyical Coach - Mean: {mean}, Standard Deviation: {std_dev}')
-mean, std_dev = sim.get_coach_championship_statistics(SUPERIOR_COACH_WIN_PROBABILITY)
-print(f'Superior Coach - Mean: {mean}, Standard Deviation: {std_dev}')
+mean, std_dev, range_val = sim.get_coach_championship_statistics(TYPICAL_COACH_WIN_PROBABILITY)
+print(f'Typyical Coach - Mean: {mean}, Standard Deviation: {std_dev}, Range: {range_val}')
+mean, std_dev, range_val = sim.get_coach_championship_statistics(SUPERIOR_COACH_WIN_PROBABILITY)
+print(f'Superior Coach - Mean: {mean}, Standard Deviation: {std_dev}, Range: {range_val}')
 
 # Plot distributions from simulation runs
 sim.plot_coach_win_loss_ratio_distribution(TYPICAL_COACH_WIN_PROBABILITY)
